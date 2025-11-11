@@ -1,0 +1,98 @@
+spring:
+  application:
+    name: ${SERVICE_NAME:sso-service}
+  config:
+    import: optional:consul:${CONSUL_HOST:}:${CONSUL_PORT:}
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:}
+      port: ${CONSUL_PORT:}
+      discovery:
+        register: true
+        prefer-ip-address: true
+        health-check-path: /actuator/health
+        health-check-interval: 10s
+        # Connection Pooling
+        catalog-services-watch-delay: 1000
+        catalog-services-watch-timeout: 2
+        acl-token: ${CONSUL_ACL_TOKEN:}
+        health-check-headers:
+          X-Config-Token: ${CONSUL_ACL_TOKEN:}
+        hostname: ${HOSTNAME:}
+        service-name: ${SERVICE_NAME:sso-service}
+        instance-id: ${spring.application.name}-${server.port}
+      config:
+        enabled: true
+        name: ${SERVICE_NAME:sso-service}
+        format: yaml
+        data-key: ${CONSUL_DATA_KEY:data}
+        acl-token: ${CONSUL_ACL_TOKEN:}
+
+  sql:
+    init:
+      mode: always
+  datasource: ## datas source
+    url: jdbc:postgresql://${DATASOURCE_URL:}:${DATASOURCE_PORT:}/jwtsercurity
+    username: postgres
+    password: secret
+    driver-class-name: org.postgresql.Driver
+
+  data: ## redis
+    redis:
+      host: ${REDIS_HOST:}
+      port: ${REDIS_PORT:}
+      timeout: 60000
+  jpa: ## jpa
+    show-sql: false
+    properties:
+      hibernate.hibernate.format_sql: true
+    database: postgresql
+    hibernate:
+      ddl-auto: none
+  security: ## security
+    user:
+      name: kaio
+      password: kaio
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info,health,prometheus,metrics,refresh,bus-refresh, openapi, swagger-ui
+  endpoint:
+    health:
+      show-details: always
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_SERVER:http://localhost:9411/api/v2/spans}
+  tracing:
+    sampling:
+      probability: 1.0
+resilience4j:
+  circuitbreaker:
+    instances:
+      global:
+        sliding-window-size: 50
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 10s
+  retry:
+    instances:
+      global:
+        max-attempts: 3
+        wait-duration: 1s
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+kk:
+  jwt: ## jwt
+    secret: 4474b612a500a8b142585ef8a3ed2e1596f4c41029dc9c2ae6e340a1774c1c38
+    secret-refresh: d75a84823352b2959fd1a1ccdf1765a0e8bc964e59e1bd9be2535639bee75ac6
+    secret-time: 1440000
+    secret-refresh-time: 10080000
+
+server:
+  port: ${SERVER_PORT:8085}

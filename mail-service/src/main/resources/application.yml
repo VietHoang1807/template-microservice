@@ -1,0 +1,97 @@
+server:
+  port: ${SERVER_PORT:8088}
+
+spring:
+  application:
+    name: ${SERVICE_NAME:api-mail}
+  config:
+    import: optional:consul:${CONSUL_HOST:localhost}:${CONSUL_PORT:8500}
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        register: true
+        prefer-ip-address: true
+        health-check-path: ${management.server.servlet.context-path}/actuator/health
+        health-check-interval: 10s
+        health-check-url: https://0.0.0.0:${server.port}/actuator/health
+        service-name: ${spring.application.name}
+        # Connection Pooling
+        catalog-services-watch-delay: 1000
+        catalog-services-watch-timeout: 2
+        acl-token: ${CONSUL_TOKEN:f18cfb7d-5a36-2a24-7c15-d3316e450d07}
+        health-check-headers:
+          X-Config-Token: ${spring.cloud.consul.discovery.acl-token}
+        query-passing: true
+        health-check-tls-skip-verify: true # check heart bằng https
+        heartbeat: # check heart bằng ttl
+          enabled: true
+        instance-id: ${spring.application.name}:${vcap.application.instance_id:${spring.application.instance_id:${random.value}}}
+      config:
+        enabled: true
+        name: ${spring.application.name}
+        format: yaml
+        data-key: ${CONSUL_DATA_KEY:data}
+        acl-token: ${spring.cloud.consul.discovery.acl-token}
+
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORt:587}
+    protocol: smtp
+    username: ${MAIL_NAME:}
+    password: ${MAIL_PASS:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 100
+        permitted-number-of-calls-in-half-open-state: 10
+        wait-duration-in-open-state:
+          nanos: 30
+        failure-rate-threshold: 60
+        event-consumer-buffer-size: 10
+        register-health-indicator: true
+      someShared:
+        sliding-window-size: 50
+    instances:
+      sendMail:
+        base-config: default
+  ratelimiter:
+    configs:
+      instances:
+        register-health-indicator: true
+        limit-for-period: 1
+        limit-refresh-period:
+          nanos: 500
+        timeout-duration:
+          seconds: 30
+
+management:
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: info,health,prometheus,metrics,refresh,bus-refresh, openapi, swagger-ui, gateway
+  endpoint:
+    metrics:
+      access: read_only
+    health:
+      show-details: always
+  tracing:
+    sampling:
+      probability: 1.0
+
+logging:
+  config: classpath:logback.xml

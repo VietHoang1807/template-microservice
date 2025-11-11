@@ -1,0 +1,14 @@
+server:
+  port: 3030
+
+spring:
+  application:
+    name: kpc-administrator
+  main:
+    allow-circular-references: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,temporalworkerinfo,health,actuator

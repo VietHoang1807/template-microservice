@@ -1,0 +1,113 @@
+spring:
+  application:
+    name: ${SERVICE_NAME:api-gateway}
+  config:
+    import: optional:consul:${CONSUL_HOST:localhost}:${CONSUL_PORT:8500}
+  cloud:
+    consul:
+      host: ${CONSUL_HOST:localhost}
+      port: ${CONSUL_PORT:8500}
+      discovery:
+        register: true
+        prefer-ip-address: true
+        health-check-path: ${management.server.servlet.context-path}/actuator/health
+        health-check-interval: 10s
+        health-check-url: https://0.0.0.0:${server.port}/actuator/health
+        service-name: ${spring.application.name}
+        # Connection Pooling
+        catalog-services-watch-delay: 1000
+        catalog-services-watch-timeout: 2
+        acl-token: ${CONSUL_TOKEN:f18cfb7d-5a36-2a24-7c15-d3316e450d07}
+        health-check-headers:
+          X-Config-Token: ${spring.cloud.consul.discovery.acl-token}
+        query-passing: true
+        health-check-tls-skip-verify: true # check heart bằng https
+        heartbeat: # check heart bằng ttl
+          enabled: true
+        instance-id: ${spring.application.name}:${vcap.application.instance_id:${spring.application.instance_id:${random.value}}}
+      config:
+        enabled: true
+        name: ${spring.application.name}
+        format: yaml
+        data-key: ${CONSUL_DATA_KEY:data}
+        acl-token: ${spring.cloud.consul.discovery.acl-token}
+    loadbalancer:
+      cache:
+        enabled: true
+    gateway:
+      server:
+        webflux:
+          routes: # manual discovery config
+            - id: order-service
+              uri: lb://order-service
+              predicates:
+                - Path=/api/order/**
+            - id: payment-service
+              uri: lb://payment-service
+              predicates:
+                - Path=/api/payments/**
+            - id: category-service
+              uri: lb://category-service
+              predicates:
+                - Path=/api/category/**
+            - id: sso-service
+              uri: lb://sso-service
+              predicates:
+                - Path=/api/sso/**
+            - id: mail-service
+              uri: lb://mail-service
+              predicates:
+                - Path=/api/mail/**
+          default-filters:
+            - StripPrefix=2
+          discovery:
+            locator: # auto-discovery config when the enabled = true
+              enabled: false
+              lower-case-service-id: true
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info,health,prometheus,metrics,refresh,bus-refresh, openapi, swagger-ui, gateway
+  endpoint:
+    metrics:
+      access: read_only
+    health:
+      show-details: always
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_SERVER:http://localhost:9411/api/v2/spans}
+  tracing:
+    sampling:
+      probability: 1.0
+resilience4j:
+  circuitbreaker:
+    instances:
+      global:
+        sliding-window-size: 50
+        failure-rate-threshold: 40
+  ratelimiter:
+    configs:
+      instances:
+        register-health-indicator: true
+        limit-for-period: 1
+        limit-refresh-period:
+          nanos: 500
+        timeout-duration:
+          seconds: 30
+logging:
+  level:
+    org.springframework.cloud.loadbalancer: DEBUG
+    org.springframework.cloud.consul.discovery: DEBUG
+  config: classpath:logback.xml
+server:
+  port: ${SERVER_PORT:4080}
+  ssl:
+    enabled: true
+    key-store: ${SSL_KEY_STORE:classpath:ssl/mykeystore.p12}
+    key-store-type: ${SSL_KEY_TYPE:PKCS12}
+    key-store-password: ${SLL_KEY_PASS:changeit}

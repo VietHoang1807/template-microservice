@@ -1,0 +1,13 @@
+# Maven build folders
+target/
+*/target/
+
+# Ignore IntelliJ IDEA files
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Logs
+logs/
+*.log

@@ -1,0 +1,75 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  # consul discovery
+  - job_name: 'consul-server'
+    metrics_path: '/v1/agent/metrics'
+    params:
+      format: ['prometheus']
+      token: ['f18cfb7d-5a36-2a24-7c15-d3316e450d07']
+    static_configs:
+      - targets: ['consul-server:8500']
+
+  # Thu thập metrics từ chính Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['prometheus:9090']
+
+  # Thu thập metrics từ các service Spring Boot
+  - job_name: 'gateway-service'
+    scheme: https
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:4080' # gateway-service
+        labels:
+          service: 'gateway-service'
+    tls_config:
+      insecure_skip_verify: true
+      #ca_file: /etc/ssl/certs/my-ca.crt
+  - job_name: 'order-service'
+    scheme: http
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:8081' # order-service
+        labels:
+          service: 'order-service'
+    tls_config:
+      insecure_skip_verify: true
+      #ca_file: /etc/ssl/certs/my-ca.crt
+  - job_name: 'payment-service'
+    scheme: http
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:8082' # order-service
+        labels:
+          service: 'payment-service'
+    tls_config:
+      insecure_skip_verify: true
+      #ca_file: /etc/ssl/certs/my-ca.crt
+  - job_name: 'category-service'
+    scheme: http
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:8083' # category-service
+        labels:
+          service: 'category-service'
+    tls_config:
+      insecure_skip_verify: true
+      #ca_file: /etc/ssl/certs/my-ca.crt
+  - job_name: 'mail-service'
+    scheme: http
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets:
+          - 'host.docker.internal:8084' # mail-service
+        labels:
+          service: 'mail-service'
+    tls_config:
+      insecure_skip_verify: true
+      #ca_file: /etc/ssl/certs/my-ca.crt
+
